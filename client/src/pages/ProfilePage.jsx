@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
+import TrendChart from '../components/TrendChart.jsx';
+
+const emptyForm = { type: 'lab_report', title: '', doctor: '', date: '' };
 
 export default function ProfilePage() {
   const { id } = useParams();
   const [profile, setProfile] = useState(null);
   const [records, setRecords] = useState([]);
   const [measurements, setMeasurements] = useState([]);
-  const [form, setForm] = useState({ type: 'lab_report', title: '', doctor: '' });
+  const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -38,6 +41,7 @@ export default function ProfilePage() {
       fd.append('type', form.type);
       fd.append('title', form.title);
       fd.append('doctor', form.doctor);
+      if (form.date) fd.append('date', form.date);
       fd.append('file', file);
 
       const { data } = await api.post('/records', fd);
@@ -45,7 +49,7 @@ export default function ProfilePage() {
 
       setMsg(`Done: ${res.data.measurements.length} values found. Please check them below.`);
       setFile(null);
-      setForm({ type: 'lab_report', title: '', doctor: '' });
+      setForm(emptyForm);
       formEl.reset();
       await load();
     } catch (err) {
@@ -98,6 +102,8 @@ export default function ProfilePage() {
             onChange={e => setForm({ ...form, title: e.target.value })} />
           <input placeholder="Doctor" value={form.doctor}
             onChange={e => setForm({ ...form, doctor: e.target.value })} />
+          <input type="date" value={form.date}
+            onChange={e => setForm({ ...form, date: e.target.value })} />
         </div>
         <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setFile(e.target.files[0])} />
         <button type="submit" disabled={busy}>{busy ? 'Working...' : 'Upload and read'}</button>
@@ -120,6 +126,9 @@ export default function ProfilePage() {
         ))}
         {records.length === 0 && <li className="muted">No reports yet</li>}
       </ul>
+
+      <h2>Trends</h2>
+      <TrendChart measurements={measurements} />
 
       <h2>Extracted values</h2>
       <p className="muted">Check these against your report. Click Edit to fix a wrong value.</p>
