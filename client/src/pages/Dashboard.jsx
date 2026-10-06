@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 
 export default function Dashboard() {
@@ -41,7 +41,7 @@ export default function Dashboard() {
       <h2>Family profiles</h2>
       <ul>
         {profiles.map(p => (
-          <li key={p._id}>{p.name} <span className="muted">({p.relation})</span></li>
+          <li key={p._id}><Link to={`/profile/${p._id}`}>{p.name}</Link> <span className="muted">({p.relation})</span></li>
         ))}
         {profiles.length === 0 && <li className="muted">No profiles yet</li>}
       </ul>

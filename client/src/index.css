@@ -12,3 +12,14 @@ button.secondary { background: #e6ebf2; color: #333; }
 .muted { color: #6b7785; font-size: 14px; }
 .error { color: #c0392b; font-size: 14px; margin: 0; }
 ul { padding-left: 20px; }
+.card.wide { max-width: 900px; }
+.record { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3e8ef; }
+.badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.badge.normal { background: #e3f6ea; color: #1e7b45; }
+.badge.high { background: #fde8e8; color: #c0392b; }
+.badge.low { background: #fff3d6; color: #a36a00; }
+a { color: #0b5cab; }
+ul { list-style: none; padding-left: 0; }
