@@ -23,3 +23,7 @@ th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e3e8ef; }
 .badge.low { background: #fff3d6; color: #a36a00; }
 a { color: #0b5cab; }
 ul { list-style: none; padding-left: 0; }
+.summary { margin-top: 12px; }
+.sum { padding: 6px 10px; border-left: 4px solid #1e7b45; background: #f6faf7; margin-bottom: 6px; border-radius: 4px; list-style: none; }
+.sum.high { border-color: #c0392b; background: #fdf3f3; }
+.sum.low { border-color: #a36a00; background: #fffaf0; }

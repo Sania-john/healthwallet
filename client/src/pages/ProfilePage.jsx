@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
 import TrendChart from '../components/TrendChart.jsx';
-
+import Summary from '../components/Summary.jsx';
 const emptyForm = { type: 'lab_report', title: '', doctor: '', date: '' };
 
 export default function ProfilePage() {
@@ -89,7 +89,8 @@ export default function ProfilePage() {
       <Link to="/">&larr; Back</Link>
       <h1>{profile ? profile.name : 'Profile'}</h1>
       {profile && <p className="muted">{profile.relation}</p>}
-
+      <h2>Summary</h2>
+      <Summary profileId={id} refreshKey={measurements} />
       <h2>Upload a report</h2>
       <form onSubmit={upload}>
         <div className="row">
