@@ -27,3 +27,5 @@ ul { list-style: none; padding-left: 0; }
 .sum { padding: 6px 10px; border-left: 4px solid #1e7b45; background: #f6faf7; margin-bottom: 6px; border-radius: 4px; list-style: none; }
 .sum.high { border-color: #c0392b; background: #fdf3f3; }
 .sum.low { border-color: #a36a00; background: #fffaf0; }
+.sharebox { display: flex; gap: 20px; align-items: center; margin-top: 16px; padding: 16px; background: #f6f9fd; border-radius: 10px; }
+.sharebox input { width: 100%; box-sizing: border-box; }

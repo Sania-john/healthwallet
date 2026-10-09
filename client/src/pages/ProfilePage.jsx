@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
-import TrendChart from '../components/TrendChart.jsx';
 import Summary from '../components/Summary.jsx';
+import TrendChart from '../components/TrendChart.jsx';
+import ShareLink from '../components/ShareLink.jsx';
+
 const emptyForm = { type: 'lab_report', title: '', doctor: '', date: '' };
 
 export default function ProfilePage() {
@@ -16,17 +18,23 @@ export default function ProfilePage() {
   const [msg, setMsg] = useState('');
 
   const load = async () => {
-    const [p, r, m] = await Promise.all([
-      api.get('/profiles'),
-      api.get('/records', { params: { profileId: id } }),
-      api.get('/measurements', { params: { profileId: id } })
-    ]);
-    setProfile(p.data.find(x => x._id === id));
-    setRecords(r.data);
-    setMeasurements(m.data);
-  };
+  const [p, r, m] = await Promise.allSettled([
+    api.get('/profiles'),
+    api.get('/records', { params: { profileId: id } }),
+    api.get('/measurements', { params: { profileId: id } })
+  ]);
+  if (p.status === 'fulfilled') setProfile(p.value.data.find(x => x._id === id));
+  else console.error('profiles failed:', p.reason);
+  if (r.status === 'fulfilled') setRecords(r.value.data);
+  else console.error('records failed:', r.reason);
+  if (m.status === 'fulfilled') setMeasurements(m.value.data);
+  else console.error('measurements failed:', m.reason);
+};
 
   useEffect(() => { load().catch(console.error); }, [id]);
+
+  const reason = err =>
+    err.response?.data?.message || err.message || 'Unknown error';
 
   const upload = async e => {
     e.preventDefault();
@@ -34,7 +42,10 @@ export default function ProfilePage() {
     if (!file) return setMsg('Please choose a file first');
 
     setBusy(true);
-    setMsg('Uploading and reading your report... (images can take a few seconds)');
+    setMsg('Uploading your report...');
+
+    // Step 1: upload the file
+    let record;
     try {
       const fd = new FormData();
       fd.append('profileId', id);
@@ -45,23 +56,38 @@ export default function ProfilePage() {
       fd.append('file', file);
 
       const { data } = await api.post('/records', fd);
-      const res = await api.post(`/records/${data._id}/extract`);
-
-      setMsg(`Done: ${res.data.measurements.length} values found. Please check them below.`);
-      setFile(null);
-      setForm(emptyForm);
-      formEl.reset();
-      await load();
+      record = data;
     } catch (err) {
-      setMsg(err.response?.data?.message || 'Upload failed');
-    } finally {
+      console.error('Upload step failed:', err);
+      setMsg(`Upload failed: ${reason(err)}`);
       setBusy(false);
+      return;
     }
+
+    // Step 2: read the values from the file
+    try {
+      setMsg('File uploaded. Reading values (images can take a few seconds)...');
+      const res = await api.post(`/records/${record._id}/extract`);
+      setMsg(`Done: ${res.data.measurements.length} values found. Please check them below.`);
+    } catch (err) {
+      console.error('Extract step failed:', err);
+      setMsg(`File uploaded, but reading values failed: ${reason(err)}`);
+    }
+
+    setFile(null);
+    setForm(emptyForm);
+    formEl.reset();
+    await load().catch(console.error);
+    setBusy(false);
   };
 
   const openFile = async rec => {
-    const { data } = await api.get(`/records/${rec._id}/file`, { responseType: 'blob' });
-    window.open(URL.createObjectURL(data), '_blank');
+    try {
+      const { data } = await api.get(`/records/${rec._id}/file`, { responseType: 'blob' });
+      window.open(URL.createObjectURL(data), '_blank');
+    } catch (err) {
+      setMsg(`Could not open file: ${reason(err)}`);
+    }
   };
 
   const removeRecord = async rec => {
@@ -89,8 +115,7 @@ export default function ProfilePage() {
       <Link to="/">&larr; Back</Link>
       <h1>{profile ? profile.name : 'Profile'}</h1>
       {profile && <p className="muted">{profile.relation}</p>}
-      <h2>Summary</h2>
-      <Summary profileId={id} refreshKey={measurements} />
+
       <h2>Upload a report</h2>
       <form onSubmit={upload}>
         <div className="row">
@@ -128,8 +153,14 @@ export default function ProfilePage() {
         {records.length === 0 && <li className="muted">No reports yet</li>}
       </ul>
 
+      <h2>Summary</h2>
+      <Summary profileId={id} refreshKey={measurements} />
+
       <h2>Trends</h2>
       <TrendChart measurements={measurements} />
+
+      <h2>Share with your doctor</h2>
+      <ShareLink profileId={id} />
 
       <h2>Extracted values</h2>
       <p className="muted">Check these against your report. Click Edit to fix a wrong value.</p>
