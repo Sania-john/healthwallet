@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import TrendChart from '../components/TrendChart.jsx';
+import DoctorNoteForm from '../components/DoctorNoteForm.jsx';
 
 const LANGS = [['en', 'English'], ['ta', 'தமிழ்'], ['hi', 'हिन्दी']];
 
@@ -11,11 +12,12 @@ export default function SharedView() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadData = () =>
     axios.get(`http://localhost:5000/api/share/public/${token}`, { params: { lang } })
       .then(r => setData(r.data))
       .catch(err => setError(err.response?.data?.message || 'Could not load this link'));
-  }, [token, lang]);
+
+  useEffect(() => { loadData(); }, [token, lang]);
 
   if (error) return <div className="card"><h1>HealthWallet</h1><p className="error">{error}</p></div>;
   if (!data) return <div className="card"><p className="muted">Loading...</p></div>;
@@ -64,6 +66,17 @@ export default function SharedView() {
           </tbody>
         </table>
       </div>
+
+      <h2>Doctor's note and follow-up</h2>
+      {data.notes && data.notes.length === 0 && <p className="muted">No notes yet.</p>}
+      {data.notes && data.notes.map(n => (
+        <div key={n._id} className="sum">
+          <strong>{n.doctorName}</strong> · {fmt(n.createdAt)}<br />
+          {n.note}
+          {n.followUpDate && <><br /><em>Follow-up: {fmt(n.followUpDate)}</em></>}
+        </div>
+      ))}
+      <DoctorNoteForm token={token} onSaved={loadData} />
     </div>
   );
 }

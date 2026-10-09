@@ -4,6 +4,7 @@ import api from '../api';
 import Summary from '../components/Summary.jsx';
 import TrendChart from '../components/TrendChart.jsx';
 import ShareLink from '../components/ShareLink.jsx';
+import DoctorNotes from '../components/DoctorNotes.jsx';
 
 const emptyForm = { type: 'lab_report', title: '', doctor: '', date: '' };
 
@@ -68,7 +69,11 @@ export default function ProfilePage() {
     try {
       setMsg('File uploaded. Reading values (images can take a few seconds)...');
       const res = await api.post(`/records/${record._id}/extract`);
-      setMsg(`Done: ${res.data.measurements.length} values found. Please check them below.`);
+      setMsg(
+      res.data.measurements.length > 0
+      ? `Done: ${res.data.measurements.length} values found. Please check them below.`
+      : 'Report saved. No lab values were detected (handwritten prescriptions and unusual layouts are stored but not read automatically).'
+);
     } catch (err) {
       console.error('Extract step failed:', err);
       setMsg(`File uploaded, but reading values failed: ${reason(err)}`);
@@ -158,7 +163,8 @@ export default function ProfilePage() {
 
       <h2>Trends</h2>
       <TrendChart measurements={measurements} />
-
+      <h2>Doctor's notes and follow-up</h2>
+      <DoctorNotes profileId={id} />
       <h2>Share with your doctor</h2>
       <ShareLink profileId={id} />
 

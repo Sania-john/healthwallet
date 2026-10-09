@@ -77,7 +77,10 @@ export default function ShareLink({ profileId }) {
           <ul>
             {links.map(l => (
               <li key={l._id} className="record">
-                <span className="muted">Expires {new Date(l.expiresAt).toLocaleString()}</span>
+                <span className="muted">
+                  Expires {new Date(l.expiresAt).toLocaleString()} · Opened {l.viewCount || 0} times
+                  {l.lastViewedAt ? ` · Last opened ${new Date(l.lastViewedAt).toLocaleString()}` : ''}
+                </span>
                 <button className="secondary" onClick={() => revoke(l._id)}>Revoke</button>
               </li>
             ))}

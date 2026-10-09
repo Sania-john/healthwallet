@@ -3,21 +3,30 @@ const crypto = require('crypto');
 const ShareLink = require('../models/ShareLink');
 const Profile = require('../models/Profile');
 const Measurement = require('../models/Measurement');
+const DoctorNote = require('../models/DoctorNote');
 const auth = require('../middleware/auth');
 const { buildSummary } = require('../utils/summary');
 
 const router = express.Router();
 
-// PUBLIC: doctor opens the link (no login). Returns read-only data only.
+const activeLink = token =>
+  ShareLink.findOne({ token, expiresAt: { $gt: new Date() } });
+
+// PUBLIC: doctor opens the link (no login)
 router.get('/public/:token', async (req, res) => {
   try {
-    const link = await ShareLink.findOne({ token: req.params.token, expiresAt: { $gt: new Date() } });
+    const link = await activeLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'This link is invalid or has expired' });
 
     const profile = await Profile.findById(link.profileId);
     if (!profile) return res.status(404).json({ message: 'Profile not found' });
 
+    link.viewCount += 1;
+    link.lastViewedAt = new Date();
+    await link.save();
+
     const items = await Measurement.find({ profileId: link.profileId }).sort({ date: 1 });
+    const notes = await DoctorNote.find({ profileId: link.profileId }).sort({ createdAt: -1 });
     res.json({
       profile: { name: profile.name, relation: profile.relation },
       expiresAt: link.expiresAt,
@@ -25,6 +34,7 @@ router.get('/public/:token', async (req, res) => {
         _id: m._id, testName: m.testName, value: m.value, unit: m.unit,
         refLow: m.refLow, refHigh: m.refHigh, status: m.status, date: m.date
       })),
+      notes,
       summary: buildSummary(items, req.query.lang)
     });
   } catch (err) {
@@ -32,10 +42,31 @@ router.get('/public/:token', async (req, res) => {
   }
 });
 
+// PUBLIC: doctor leaves a note / follow-up date
+router.post('/public/:token/notes', async (req, res) => {
+  try {
+    const link = await activeLink(req.params.token);
+    if (!link) return res.status(404).json({ message: 'This link is invalid or has expired' });
+
+    const note = (req.body.note || '').trim();
+    if (!note) return res.status(400).json({ message: 'Please write a note' });
+
+    const created = await DoctorNote.create({
+      userId: link.userId,
+      profileId: link.profileId,
+      doctorName: (req.body.doctorName || '').trim() || 'Doctor',
+      note: note.slice(0, 1000),
+      followUpDate: req.body.followUpDate || undefined
+    });
+    res.status(201).json(created);
+  } catch (err) {
+    res.status(400).json({ message: 'Could not save the note' });
+  }
+});
+
 // Everything below needs login
 router.use(auth);
 
-// create a link: { profileId, hours }
 router.post('/', async (req, res) => {
   try {
     const { profileId } = req.body;
@@ -57,7 +88,14 @@ router.post('/', async (req, res) => {
   }
 });
 
-// list my active links for a profile
+// patient: doctor notes for a profile
+router.get('/notes', async (req, res) => {
+  const notes = await DoctorNote.find({
+    userId: req.userId, profileId: req.query.profileId
+  }).sort({ createdAt: -1 });
+  res.json(notes);
+});
+
 router.get('/', async (req, res) => {
   const links = await ShareLink.find({
     userId: req.userId, profileId: req.query.profileId, expiresAt: { $gt: new Date() }
@@ -65,7 +103,6 @@ router.get('/', async (req, res) => {
   res.json(links);
 });
 
-// revoke a link
 router.delete('/:id', async (req, res) => {
   try {
     const link = await ShareLink.findOneAndDelete({ _id: req.params.id, userId: req.userId });
